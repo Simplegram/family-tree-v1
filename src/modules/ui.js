@@ -36,7 +36,10 @@ export async function openPersonDrawer(personId) {
     var relationships = await getRelationshipsForPerson(personId)
     var allPersons = await getAllPersons()
 
-    var parents = relationships.filter(function (r) { return r.type === 'child' && r.relatedId === person.id })
+    // Relationship model: {personId: parent, relatedId: child, type: 'parent'}
+    // Parents of this person: type='parent' where this person is the relatedId (child side)
+    var parents = relationships.filter(function (r) { return r.type === 'parent' && r.relatedId === person.id })
+    // Children of this person: type='parent' where this person is the personId (parent side)
     var children = relationships.filter(function (r) { return r.type === 'parent' && r.personId === person.id })
     var spouses = relationships.filter(function (r) { return r.type === 'spouse' })
 

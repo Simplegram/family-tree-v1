@@ -55,6 +55,17 @@ export function renderTree(treeRoots) {
         .attr('fill', 'none').attr('stroke', '#475569').attr('stroke-width', 2)
         .attr('d', function (d) { return isVertical ? makeCoupleDiagV(d, layout.coords) : makeCoupleDiagH(d, layout.coords) })
 
+    var spouseLinkGroup = g.selectAll('.spouse-link-group').data([null]).join('g')
+        .attr('class', 'spouse-link-group')
+        .lower()
+
+    spouseLinkGroup.selectAll('line.spouse-link').data(layout.spouseLinks).join('line').attr('class', 'spouse-link')
+        .attr('x1', function (d) { var p = getPoint(d.s, layout.coords); return isVertical ? p.x : p.y })
+        .attr('y1', function (d) { var p = getPoint(d.s, layout.coords); return isVertical ? p.y : p.x })
+        .attr('x2', function (d) { var p = getPoint(d.t, layout.coords); return isVertical ? p.x : p.y })
+        .attr('y2', function (d) { var p = getPoint(d.t, layout.coords); return isVertical ? p.y : p.x })
+        .attr('stroke', '#f59e0b').attr('stroke-width', 2).attr('stroke-dasharray', '6,3').attr('opacity', 0.7)
+
     var ng = g.selectAll('.node-group').data(nodes, nodeKey)
         .join('g').attr('class', 'node-group')
         .attr('transform', function (d) {
@@ -99,14 +110,6 @@ export function renderTree(treeRoots) {
 
     ng.on('mouseenter', function () { d3.select(this).select('rect.node-rect').transition().duration(150).attr('stroke-width', 3) })
         .on('mouseleave', function () { d3.select(this).select('rect.node-rect').transition().duration(150).attr('stroke-width', 2) })
-
-    g.selectAll('.spouse-link-group').data([null]).join('g').attr('class', 'spouse-link-group')
-        .selectAll('line.spouse-link').data(layout.spouseLinks).join('line').attr('class', 'spouse-link')
-        .attr('x1', function (d) { var p = getPoint(d.s, layout.coords); return isVertical ? p.x : p.y })
-        .attr('y1', function (d) { var p = getPoint(d.s, layout.coords); return isVertical ? p.y : p.x })
-        .attr('x2', function (d) { var p = getPoint(d.t, layout.coords); return isVertical ? p.x : p.y })
-        .attr('y2', function (d) { var p = getPoint(d.t, layout.coords); return isVertical ? p.y : p.x })
-        .attr('stroke', '#f59e0b').attr('stroke-width', 2).attr('stroke-dasharray', '6,3').attr('opacity', 0.7)
 
     centerTree()
 }

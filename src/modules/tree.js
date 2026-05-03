@@ -66,10 +66,10 @@ export function renderTree(treeRoots) {
     var isSp = function (d) { return d.data._isSpouse === true }
 
     ng.selectAll('rect.node-rect').data(function (d) { return [d] }).join('rect').attr('class', 'node-rect')
-        .attr('width', function (d) { return isSp(d) ? NW * 0.85 : NW })
-        .attr('height', function (d) { return isSp(d) ? SNH : NH })
-        .attr('x', function (d) { return isSp(d) ? -NW * 0.85 / 2 - 10 : -NW / 2 })
-        .attr('y', function (d) { return isSp(d) ? -SNH / 2 : -NH / 2 })
+        .attr('width', NW)
+        .attr('height', NH)
+        .attr('x', -NW / 2)
+        .attr('y', -NH / 2)
         .attr('rx', 8).attr('ry', 8)
         .attr('fill', function (d) { if (isSp(d)) return '#1e293b'; var g = d.data.gender; if (g === 'male') return '#1e3a5f'; if (g === 'female') return '#4a1942'; return '#1e293b' })
         .attr('stroke', function (d) { if (isSp(d)) return '#64748b'; var g = d.data.gender; if (g === 'male') return '#3b82f6'; if (g === 'female') return '#a855f7'; return '#10b981' })
@@ -77,13 +77,13 @@ export function renderTree(treeRoots) {
 
     ng.selectAll('text.node-name').data(function (d) { return [d] }).join('text').attr('class', 'node-name')
         .attr('text-anchor', 'middle')
-        .attr('dy', function (d) { return isSp(d) ? '-0.1em' : '-0.2em' })
+        .attr('dy', '-0.2em')
         .attr('fill', '#e2e8f0').attr('font-size', function (d) { return isSp(d) ? '11px' : '13px' }).attr('font-weight', '600')
         .text(function (d) { var n = d.data.name || 'Unknown'; var ml = isSp(d) ? 20 : 25; return n.length > ml ? n.slice(0, ml) + '\u2026' : n })
 
     ng.selectAll('text.node-dates').data(function (d) { return [d] }).join('text').attr('class', 'node-dates')
         .attr('text-anchor', 'middle')
-        .attr('dy', function (d) { return isSp(d) ? '0.9em' : '0.7em' })
+        .attr('dy', '0.7em')
         .attr('fill', '#94a3b8').attr('font-size', '10px')
         .text(function (d) { var b = d.data.birthDate ? new Date(d.data.birthDate).getFullYear() : '?'; var dt = d.data.deathDate ? ' - ' + new Date(d.data.deathDate).getFullYear() : ''; return b + dt })
 

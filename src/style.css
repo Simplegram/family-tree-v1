@@ -1,0 +1,155 @@
+@import "tailwindcss";
+
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+
+#tree-svg {
+    touch-action: none;
+}
+
+.link {
+    transition: stroke 0.2s ease;
+}
+
+.link:hover {
+    stroke: #10b981 !important;
+}
+
+.node-group {
+    transition: opacity 0.2s ease;
+}
+
+.node-rect {
+    transition: all 0.15s ease;
+}
+
+#person-modal,
+#relationship-modal,
+#export-modal,
+#settings-modal {
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+#person-drawer:not(.hidden) {
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}
+
+#mobile-drawer:not(.hidden) {
+    animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+.person-swiper .swiper-pagination-bullet {
+    background: #475569;
+    opacity: 1;
+}
+
+.person-swiper .swiper-pagination-bullet-active {
+    background: #10b981;
+}
+
+.person-swiper {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 0;
+}
+
+.person-swiper .swiper-wrapper,
+.person-swiper .swiper-slide {
+    min-width: 0;
+}
+
+.person-swiper .swiper-slide {
+    box-sizing: border-box;
+}
+
+@media (prefers-contrast: high) {
+    .node-rect {
+        stroke-width: 3px !important;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible {
+        outline: solid #10b981;
+        outline-offset: 2px;
+    }
+}
+
+@media print {
+
+    header,
+    nav,
+    aside,
+    button {
+        display: none !important;
+    }
+
+    #tree-container {
+        width: 100% !important;
+        height: auto !important;
+    }
+}
+
+@media (max-width: 768px) {
+    #person-drawer {
+        display: none !important;
+    }
+}

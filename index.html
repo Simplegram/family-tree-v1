@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>KinKeep - Family Tree</title>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen overflow-hidden flex flex-col">
+
+  <!-- Header -->
+  <header id="app-header" class="flex-shrink-0 z-50 bg-slate-900/95 backdrop-blur border-b border-slate-800 h-14 flex items-center px-4 gap-3">
+    <div class="flex items-center gap-2 mr-auto">
+      <span class="text-xl">🌳</span>
+      <span class="text-lg font-bold tracking-tight text-emerald-400">KinKeep</span>
+    </div>
+
+    <div id="connection-status" class="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-full" title="Local Only / Protected">
+      <span>🔒</span>
+      <span class="hidden sm:inline">Local Only</span>
+    </div>
+
+    <button id="btn-add-person" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+      <span>+</span>
+      <span class="hidden sm:inline">Add Person</span>
+    </button>
+
+    <button id="btn-export" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+      <span>↓</span>
+      <span class="hidden sm:inline">Export</span>
+    </button>
+
+    <button id="btn-settings" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">
+      <span>⚙</span>
+    </button>
+  </header>
+
+  <!-- Main Layout -->
+  <div class="flex flex-1 overflow-hidden">
+
+    <!-- Sidebar: Person List -->
+    <aside id="sidebar" class="hidden md:flex flex-col w-72 bg-slate-900 border-r border-slate-800 overflow-y-auto">
+      <div class="p-4 border-b border-slate-800">
+        <input id="search-persons" type="text" placeholder="Search family..." class="w-full bg-slate-800 text-slate-200 placeholder-slate-500 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+      </div>
+      <div id="person-list" class="flex-1 overflow-y-auto">
+        <!-- Person list items rendered here -->
+      </div>
+    </aside>
+
+    <!-- Tree Container -->
+    <main id="tree-container" class="flex-1 relative overflow-hidden bg-slate-950">
+      <svg id="tree-svg" class="absolute inset-0 w-full h-full"></svg>
+
+      <!-- Tree Controls -->
+      <div class="absolute bottom-4 left-4 flex gap-2 z-10">
+        <button id="btn-zoom-in" class="bg-slate-800/90 hover:bg-slate-700 text-slate-300 w-9 h-9 rounded-lg flex items-center justify-center transition-colors text-lg" aria-label="Zoom in">+</button>
+        <button id="btn-zoom-out" class="bg-slate-800/90 hover:bg-slate-700 text-slate-300 w-9 h-9 rounded-lg flex items-center justify-center transition-colors text-lg" aria-label="Zoom out">−</button>
+        <button id="btn-zoom-reset" class="bg-slate-800/90 hover:bg-slate-700 text-slate-300 w-9 h-9 rounded-lg flex items-center justify-center transition-colors text-sm" aria-label="Reset zoom">⟲</button>
+        <button id="btn-layout-toggle" class="bg-slate-800/90 hover:bg-slate-700 text-slate-300 w-9 h-9 rounded-lg flex items-center justify-center transition-colors text-sm" aria-label="Toggle tree layout">↕</button>
+      </div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
+        <span class="text-6xl mb-4">🌱</span>
+        <p class="text-lg font-medium mb-2">Start Your Family Tree</p>
+        <p class="text-sm mb-4">Add your first person to begin building your family history.</p>
+        <button id="btn-empty-add" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 rounded-lg font-medium transition-colors">Add First Person</button>
+      </div>
+    </main>
+
+    <!-- Right Panel: Person Detail Drawer -->
+    <aside id="person-drawer" class="hidden w-[420px] bg-slate-900 border-l border-slate-800 overflow-y-auto flex-shrink-0">
+      <!-- Drawer content rendered dynamically -->
+    </aside>
+  </div>
+
+  <!-- Mobile Bottom Nav -->
+  <nav id="mobile-nav" class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur border-t border-slate-800 flex justify-around py-2">
+    <button id="mobile-btn-tree" class="flex flex-col items-center text-emerald-400 text-xs gap-1">
+      <span>🌳</span><span>Tree</span>
+    </button>
+    <button id="mobile-btn-list" class="flex flex-col items-center text-slate-500 text-xs gap-1">
+      <span>👥</span><span>List</span>
+    </button>
+    <button id="mobile-btn-add" class="flex flex-col items-center text-slate-500 text-xs gap-1">
+      <span class="bg-emerald-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-lg leading-none -mt-4">+</span>
+    </button>
+    <button id="mobile-btn-export" class="flex flex-col items-center text-slate-500 text-xs gap-1">
+      <span>↓</span><span>Export</span>
+    </button>
+  </nav>
+
+  <!-- Add/Edit Person Modal -->
+  <div id="person-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div class="flex items-center justify-between p-5 border-b border-slate-800">
+        <h2 id="modal-title" class="text-xl font-bold text-slate-100">Add Person</h2>
+        <button id="modal-close" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+      </div>
+      <form id="person-form" class="p-5 space-y-4">
+        <input type="hidden" id="person-id" />
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="first-name" class="block text-sm font-medium text-slate-400 mb-1">First Name</label>
+            <input type="text" id="first-name" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+          <div>
+            <label for="last-name" class="block text-sm font-medium text-slate-400 mb-1">Last Name</label>
+            <input type="text" id="last-name" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="birth-date" class="block text-sm font-medium text-slate-400 mb-1">Birth Date</label>
+            <input type="date" id="birth-date" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+          <div>
+            <label for="death-date" class="block text-sm font-medium text-slate-400 mb-1">Death Date</label>
+            <input type="date" id="death-date" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+        </div>
+
+        <div>
+          <label for="gender" class="block text-sm font-medium text-slate-400 mb-1">Gender</label>
+          <select id="gender" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="">Not specified</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="photo-url" class="block text-sm font-medium text-slate-400 mb-1">Photo URL (optional)</label>
+          <input type="url" id="photo-url" placeholder="https://..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+
+        <div>
+          <label for="bio" class="block text-sm font-medium text-slate-400 mb-1">Biography / Notes</label>
+          <textarea id="bio" rows="4" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-y"></textarea>
+        </div>
+
+        <div class="flex gap-3 pt-2">
+          <button type="submit" id="person-form-submit" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg font-medium transition-colors">Save Person</button>
+          <button type="button" id="person-form-cancel" class="px-6 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-lg font-medium transition-colors">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Relationship Wizard Modal -->
+  <div id="relationship-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg mx-4 shadow-2xl">
+      <div class="flex items-center justify-between p-5 border-b border-slate-800">
+        <h2 class="text-xl font-bold text-slate-100">Link Relationship</h2>
+        <button id="rel-modal-close" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div>
+          <label for="rel-person-a" class="block text-sm font-medium text-slate-400 mb-1">Person A</label>
+          <select id="rel-person-a" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+        </div>
+        <div>
+          <label for="rel-type" class="block text-sm font-medium text-slate-400 mb-1">Relationship</label>
+          <select id="rel-type" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <option value="parent">Person A is parent of Person B</option>
+            <option value="spouse">Person A is spouse of Person B</option>
+          </select>
+        </div>
+        <div>
+          <label for="rel-person-b" class="block text-sm font-medium text-slate-400 mb-1">Person B</label>
+          <select id="rel-person-b" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></select>
+        </div>
+        <button id="rel-submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg font-medium transition-colors">Create Link</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export Modal -->
+  <div id="export-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md mx-4 shadow-2xl">
+      <div class="flex items-center justify-between p-5 border-b border-slate-800">
+        <h2 class="text-xl font-bold text-slate-100">Export Family Tree</h2>
+        <button id="export-modal-close" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+      </div>
+      <div class="p-5 space-y-3">
+        <button id="export-json" class="w-full flex items-center gap-3 bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-3 rounded-lg transition-colors text-left">
+          <span class="text-xl">{ }</span>
+          <div><p class="font-medium">JSON Backup</p><p class="text-xs text-slate-400">Full database export for backup</p></div>
+        </button>
+        <button id="export-gedcom" class="w-full flex items-center gap-3 bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-3 rounded-lg transition-colors text-left">
+          <span class="text-xl">📜</span>
+          <div><p class="font-medium">GEDCOM 5.5</p><p class="text-xs text-slate-400">Industry-standard genealogy format</p></div>
+        </button>
+        <button id="export-svg" class="w-full flex items-center gap-3 bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-3 rounded-lg transition-colors text-left">
+          <span class="text-xl">🖼</span>
+          <div><p class="font-medium">SVG Image</p><p class="text-xs text-slate-400">Export current tree visualization</p></div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md mx-4 shadow-2xl">
+      <div class="flex items-center justify-between p-5 border-b border-slate-800">
+        <h2 class="text-xl font-bold text-slate-100">Settings</h2>
+        <button id="settings-modal-close" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div>
+          <label for="import-file" class="block text-sm font-medium text-slate-400 mb-1">Import JSON Backup</label>
+          <input type="file" id="import-file" accept=".json" class="w-full text-sm text-slate-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700" />
+        </div>
+        <button id="import-submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 rounded-lg font-medium transition-colors">Import Database</button>
+        <hr class="border-slate-800" />
+        <button id="delete-all" class="w-full bg-red-900/50 hover:bg-red-900/70 text-red-300 py-2.5 rounded-lg font-medium transition-colors">⚠ Delete All Data</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Person Detail Drawer (Mobile - Bottom Sheet) -->
+  <div id="mobile-drawer" class="hidden md:hidden fixed inset-x-0 bottom-0 z-[80] bg-slate-900 rounded-t-2xl border-t border-slate-700 max-h-[85vh] overflow-y-auto">
+    <!-- Mobile drawer content rendered dynamically -->
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

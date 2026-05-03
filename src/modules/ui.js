@@ -126,6 +126,12 @@ function buildDrawerContent(person, parentNames, childNames, spouseNames) {
         '<button id="drawer-close" class="text-slate-400 hover:text-white text-xl">&times;</button>' +
         '</div>' +
 
+        '<div class="flex flex-shrink-0 border-b border-slate-800">' +
+        '<button class="swiper-tab-btn flex-1 py-3 text-xs font-medium text-emerald-400 border-b-2 border-emerald-400 bg-slate-800/30" data-slide="0">Profile</button>' +
+        '<button class="swiper-tab-btn flex-1 py-3 text-xs font-medium text-slate-500 hover:text-slate-300" data-slide="1">Links</button>' +
+        '<button class="swiper-tab-btn flex-1 py-3 text-xs font-medium text-slate-500 hover:text-slate-300" data-slide="2">Edit</button>' +
+        '</div>' +
+
         '<div class="swiper person-swiper flex-1 min-w-0 min-h-0 w-full overflow-hidden">' +
         '<div class="swiper-wrapper">' +
 
@@ -166,11 +172,6 @@ function buildDrawerContent(person, parentNames, childNames, spouseNames) {
 
         '</div>' +
         '<div class="swiper-pagination"></div>' +
-        '</div>' +
-        '<div class="flex flex-shrink-0 border-t border-slate-800">' +
-        '<button class="swiper-tab-btn flex-1 py-3 text-xs font-medium text-emerald-400 border-b-2 border-emerald-400 bg-slate-800/30" data-slide="0">Profile</button>' +
-        '<button class="swiper-tab-btn flex-1 py-3 text-xs font-medium text-slate-500 hover:text-slate-300" data-slide="1">Links</button>' +
-        '<button class="swiper-tab-btn flex-1 py-3 text-xs font-medium text-slate-500 hover:text-slate-300" data-slide="2">Edit</button>' +
         '</div>' +
         '</div>'
 

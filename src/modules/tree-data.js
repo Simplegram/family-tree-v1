@@ -32,6 +32,21 @@ export function buildTreeData(persons, relationships) {
         } else if (rel.type === 'spouse') {
             if (!spouseOf.has(rel.personId)) spouseOf.set(rel.personId, [])
             spouseOf.get(rel.personId).push(rel.relatedId)
+            if (!spouseOf.has(rel.relatedId)) spouseOf.set(rel.relatedId, [])
+            spouseOf.get(rel.relatedId).push(rel.personId)
+        }
+    }
+
+    for (const [parentId, childIds] of [...parentOf.entries()]) {
+        const spouseIds = spouseOf.get(parentId) || []
+        for (const spouseId of spouseIds) {
+            if (!parentOf.has(spouseId)) parentOf.set(spouseId, [])
+            const spouseChildren = parentOf.get(spouseId)
+            for (const childId of childIds) {
+                if (childId !== spouseId && !spouseChildren.includes(childId)) {
+                    spouseChildren.push(childId)
+                }
+            }
         }
     }
 
@@ -62,7 +77,9 @@ export function buildTreeData(persons, relationships) {
     // Find root nodes: people who have no parents in the dataset
     const hasParent = new Set()
     for (const rel of relationships) {
-        if (rel.type === 'child') {
+        if (rel.type === 'parent') {
+            hasParent.add(rel.relatedId)
+        } else if (rel.type === 'child') {
             hasParent.add(rel.personId) // this person has a parent (rel.relatedId)
         }
     }
@@ -153,26 +170,22 @@ function buildNode(personId, personMap, visited) {
         // (in D3 we'll handle this specially)
         node.children.push(spouseNode)
 
-        // Collect children from both partners
-        const allChildren = new Set([...person._children])
-
-        // Also get children linked to the spouse
-        const spouseChildren = []
-        for (const [pid, childIds] of personMap.entries()) {
-            if (childIds._spouses && childIds._spouses.includes(spouseId)) {
-                // This is getting complex; simplify by using relationships directly
-            }
-        }
-
         visited.add(spouseId)
     }
 
     // Add actual children (not spouses) 
     // Children of the person go under the main node, not spouse nodes
-    const childIds = person._children || []
+    const childIds = new Set(person._children || [])
+    for (const spouseId of person._spouses) {
+        const spouse = personMap.get(spouseId)
+        if (!spouse) continue
+        for (const childId of spouse._children || []) {
+            if (childId !== personId) childIds.add(childId)
+        }
+    }
 
     // If there are spouses, attach children to the first spouse node for proper genealogy display
-    if (node.children.length > 0 && childIds.length > 0) {
+    if (node.children.length > 0 && childIds.size > 0) {
         // Attach children to the spouse node (first child in our tree is the spouse)
         const spouseNode = node.children[0]
         for (const childId of childIds) {
@@ -181,7 +194,7 @@ function buildNode(personId, personMap, visited) {
                 if (childNode) spouseNode.children.push(childNode)
             }
         }
-    } else if (childIds.length > 0) {
+    } else if (childIds.size > 0) {
         // No spouses, children go directly under this node
         for (const childId of childIds) {
             if (!visited.has(childId)) {

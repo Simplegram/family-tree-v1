@@ -39,17 +39,28 @@ export function renderTree(treeRoots) {
     tl.nodeSize([NH + SIBLING_GAP, (NW + GENERATION_GAP) * sf])
     root = tl(root)
 
+    var layout = makeSpouseAwareLayout(root, (NW + GENERATION_GAP) * sf)
     var nodes = root.descendants()
     var links = root.links()
+    var visibleLinks = links.filter(function (d) { return !d.target.data._isSpouse && !d.source.data._isSpouse })
+    var coupleChildLinks = links.filter(function (d) { return d.source.data._isSpouse && !d.target.data._isSpouse && d.source.parent })
 
     g.selectAll('.link-group').data([null]).join('g').attr('class', 'link-group')
-        .selectAll('path.link').data(links).join('path').attr('class', 'link')
+        .selectAll('path.link').data(visibleLinks).join('path').attr('class', 'link')
         .attr('fill', 'none').attr('stroke', '#475569').attr('stroke-width', 2)
-        .attr('d', function (d) { return isVertical ? makeDiagV(d) : makeDiagH(d) })
+        .attr('d', function (d) { return isVertical ? makeDiagV(d, layout.coords) : makeDiagH(d, layout.coords) })
 
-    var ng = g.selectAll('.node-group').data(nodes, function (d) { return String(d.data.id) })
+    g.selectAll('.couple-child-link-group').data([null]).join('g').attr('class', 'couple-child-link-group')
+        .selectAll('path.couple-child-link').data(coupleChildLinks).join('path').attr('class', 'link couple-child-link')
+        .attr('fill', 'none').attr('stroke', '#475569').attr('stroke-width', 2)
+        .attr('d', function (d) { return isVertical ? makeCoupleDiagV(d, layout.coords) : makeCoupleDiagH(d, layout.coords) })
+
+    var ng = g.selectAll('.node-group').data(nodes, nodeKey)
         .join('g').attr('class', 'node-group')
-        .attr('transform', function (d) { return 'translate(' + (isVertical ? d.x : d.y) + ',' + (isVertical ? d.y : d.x) + ')' })
+        .attr('transform', function (d) {
+            var p = getPoint(d, layout.coords)
+            return 'translate(' + (isVertical ? p.x : p.y) + ',' + (isVertical ? p.y : p.x) + ')'
+        })
         .style('cursor', 'pointer')
 
     var isSp = function (d) { return d.data._isSpouse === true }
@@ -89,34 +100,102 @@ export function renderTree(treeRoots) {
     ng.on('mouseenter', function () { d3.select(this).select('rect.node-rect').transition().duration(150).attr('stroke-width', 3) })
         .on('mouseleave', function () { d3.select(this).select('rect.node-rect').transition().duration(150).attr('stroke-width', 2) })
 
-    var sl = []
-    function fsp(node) {
-        if (!node.data || node.data._isVirtual) { if (node.children) node.children.forEach(fsp); return }
-        if (node.children) for (var i = 0; i < node.children.length; i++) { var c = node.children[i]; if (c.data._isSpouse) sl.push({ s: node, t: c }); else fsp(c) }
-    }
-    fsp(root)
-
     g.selectAll('.spouse-link-group').data([null]).join('g').attr('class', 'spouse-link-group')
-        .selectAll('line.spouse-link').data(sl).join('line').attr('class', 'spouse-link')
-        .attr('x1', function (d) { return isVertical ? d.s.x : d.s.y })
-        .attr('y1', function (d) { return isVertical ? d.s.y : d.s.x })
-        .attr('x2', function (d) { return isVertical ? d.t.x : d.t.y })
-        .attr('y2', function (d) { return isVertical ? d.t.y : d.t.x })
+        .selectAll('line.spouse-link').data(layout.spouseLinks).join('line').attr('class', 'spouse-link')
+        .attr('x1', function (d) { var p = getPoint(d.s, layout.coords); return isVertical ? p.x : p.y })
+        .attr('y1', function (d) { var p = getPoint(d.s, layout.coords); return isVertical ? p.y : p.x })
+        .attr('x2', function (d) { var p = getPoint(d.t, layout.coords); return isVertical ? p.x : p.y })
+        .attr('y2', function (d) { var p = getPoint(d.t, layout.coords); return isVertical ? p.y : p.x })
         .attr('stroke', '#f59e0b').attr('stroke-width', 2).attr('stroke-dasharray', '6,3').attr('opacity', 0.7)
 
     centerTree()
 }
 
-function makeDiagH(d) {
-    var sx = d.source.y, sy = d.source.x
-    var tx = d.target.y, ty = d.target.x
+function makeSpouseAwareLayout(root, generationGap) {
+    var coords = new Map()
+    var spouseLinks = []
+
+    root.descendants().forEach(function (node) {
+        coords.set(node, { x: node.x, y: node.y })
+    })
+
+    root.descendants().forEach(function (node) {
+        var spouses = (node.children || []).filter(function (child) { return child.data._isSpouse })
+        spouses.forEach(function (spouse, i) {
+            var parentPoint = getPoint(node, coords)
+            var direction = i % 2 === 0 ? 1 : -1
+            var distance = (NH + 28) * (Math.floor(i / 2) + 1)
+            var originalSpousePoint = getPoint(spouse, coords)
+            var depthShift = originalSpousePoint.y - parentPoint.y
+
+            coords.set(spouse, {
+                x: parentPoint.x + direction * distance,
+                y: parentPoint.y
+            })
+
+            shiftDescendants(spouse, depthShift || generationGap, coords)
+            spouseLinks.push({ s: node, t: spouse })
+        })
+    })
+
+    return { coords: coords, spouseLinks: spouseLinks }
+}
+
+function shiftDescendants(node, amount, coords) {
+    if (!node.children || amount === 0) return
+    node.children.forEach(function (child) {
+        var point = getPoint(child, coords)
+        coords.set(child, { x: point.x, y: point.y - amount })
+        shiftDescendants(child, amount, coords)
+    })
+}
+
+function getPoint(node, coords) {
+    return coords.get(node) || { x: node.x, y: node.y }
+}
+
+function nodeKey(d) {
+    var parts = [d.data._isSpouse ? 'spouse' : 'person', d.data.id]
+    if (d.parent) parts.push(d.parent.data.id)
+    return parts.join(':')
+}
+
+function makeDiagH(d, coords) {
+    var source = getPoint(d.source, coords)
+    var target = getPoint(d.target, coords)
+    var sx = source.y, sy = source.x
+    var tx = target.y, ty = target.x
     var mx = (sx + tx) / 2
     return ['M', sx, ' ', sy, ' C', mx, ' ', sy, ' ', mx, ' ', ty, ' ', tx, ' ', ty].join('')
 }
 
-function makeDiagV(d) {
-    var sx = d.source.x, sy = d.source.y
-    var tx = d.target.x, ty = d.target.y
+function makeDiagV(d, coords) {
+    var source = getPoint(d.source, coords)
+    var target = getPoint(d.target, coords)
+    var sx = source.x, sy = source.y
+    var tx = target.x, ty = target.y
+    var my = (sy + ty) / 2
+    return ['M', sx, ' ', sy, ' C', sx, ' ', my, ' ', tx, ' ', my, ' ', tx, ' ', ty].join('')
+}
+
+function makeCoupleDiagH(d, coords) {
+    var partner = getPoint(d.source.parent, coords)
+    var spouse = getPoint(d.source, coords)
+    var target = getPoint(d.target, coords)
+    var sx = (partner.y + spouse.y) / 2
+    var sy = (partner.x + spouse.x) / 2
+    var tx = target.y, ty = target.x
+    var mx = (sx + tx) / 2
+    return ['M', sx, ' ', sy, ' C', mx, ' ', sy, ' ', mx, ' ', ty, ' ', tx, ' ', ty].join('')
+}
+
+function makeCoupleDiagV(d, coords) {
+    var partner = getPoint(d.source.parent, coords)
+    var spouse = getPoint(d.source, coords)
+    var target = getPoint(d.target, coords)
+    var sx = (partner.x + spouse.x) / 2
+    var sy = (partner.y + spouse.y) / 2
+    var tx = target.x, ty = target.y
     var my = (sy + ty) / 2
     return ['M', sx, ' ', sy, ' C', sx, ' ', my, ' ', tx, ' ', my, ' ', tx, ' ', ty].join('')
 }

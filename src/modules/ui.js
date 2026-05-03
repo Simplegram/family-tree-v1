@@ -1,4 +1,4 @@
-import { getAllPersons, getPerson, getRelationshipsForPerson, searchPersons } from './db.js'
+import { getAllPersons, getPerson, getAllRelationships, searchPersons } from './db.js'
 
 export async function renderPersonList(query) {
     if (query === void 0) query = ''
@@ -33,27 +33,40 @@ export async function openPersonDrawer(personId) {
     const person = await getPerson(personId)
     if (!person) return
 
-    var relationships = await getRelationshipsForPerson(personId)
+    var relationships = await getAllRelationships()
     var allPersons = await getAllPersons()
 
-    // Relationship model: {personId: parent, relatedId: child, type: 'parent'}
-    // Parents of this person: type='parent' where this person is the relatedId (child side)
-    var parents = relationships.filter(function (r) { return r.type === 'parent' && r.relatedId === person.id })
-    // Children of this person: type='parent' where this person is the personId (parent side)
-    var children = relationships.filter(function (r) { return r.type === 'parent' && r.personId === person.id })
-    var spouses = relationships.filter(function (r) { return r.type === 'spouse' })
+    var parentIds = new Set()
+    var childIds = new Set()
+    var spouseIds = new Set()
+
+    relationships.forEach(function (r) {
+        if (r.type === 'spouse' && (r.personId === person.id || r.relatedId === person.id)) {
+            spouseIds.add(r.personId === person.id ? r.relatedId : r.personId)
+        }
+    })
+
+    relationships.forEach(function (r) {
+        if (r.type !== 'parent') return
+
+        if (r.relatedId === person.id) {
+            parentIds.add(r.personId)
+            getSpouseIdsFromRelationships(r.personId, relationships).forEach(function (id) { parentIds.add(id) })
+        }
+
+        if (r.personId === person.id || spouseIds.has(r.personId)) {
+            childIds.add(r.relatedId)
+        }
+    })
 
     function resolveName(id) {
         var p = allPersons.find(function (x) { return x.id === id })
         return p ? p.firstName + ' ' + p.lastName : 'Unknown'
     }
 
-    var parentNames = parents.map(function (r) { return resolveName(r.personId) })
-    var childNames = children.map(function (r) { return resolveName(r.relatedId) })
-    var spouseNames = spouses.map(function (r) {
-        var otherId = r.personId === person.id ? r.relatedId : r.personId
-        return resolveName(otherId)
-    })
+    var parentNames = [...parentIds].filter(function (id) { return id !== person.id }).map(resolveName)
+    var childNames = [...childIds].filter(function (id) { return id !== person.id }).map(resolveName)
+    var spouseNames = [...spouseIds].map(resolveName)
 
     var drawerContent = buildDrawerContent(person, parentNames, childNames, spouseNames)
 
@@ -117,6 +130,14 @@ export async function openPersonDrawer(personId) {
     document.getElementById('drawer-close')?.addEventListener('click', function () {
         desktopDrawer.classList.add('hidden')
     })
+}
+
+function getSpouseIdsFromRelationships(personId, relationships) {
+    return [...new Set(relationships.filter(function (r) {
+        return r.type === 'spouse' && (r.personId === personId || r.relatedId === personId)
+    }).map(function (r) {
+        return r.personId === personId ? r.relatedId : r.personId
+    }))]
 }
 
 function buildDrawerContent(person, parentNames, childNames, spouseNames) {

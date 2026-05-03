@@ -81,26 +81,81 @@ export async function searchPersons(query) {
 // ─── Relationship CRUD ───────────────────────────────────────────────
 
 export async function addRelationship(personId, relatedId, type) {
-    // Prevent duplicate relationships of the same type
+    if (type === 'spouse') {
+        const existing = await db.relationships.filter(
+            (r) => r.type === type &&
+                ((r.personId === personId && r.relatedId === relatedId) ||
+                    (r.personId === relatedId && r.relatedId === personId))
+        ).toArray()
+
+        const id = existing.length > 0 ? existing[0].id : await ensureRelationship(personId, relatedId, type)
+        await ensureRelationship(relatedId, personId, type)
+        await syncSpouseChildren(personId, relatedId)
+        return id
+    }
+
+    const id = await ensureRelationship(personId, relatedId, type)
+
+    if (type === 'parent') {
+        // If A is parent of B, then B is child of A
+        await ensureRelationship(relatedId, personId, 'child')
+        await addSpousesAsParents(personId, relatedId)
+    } else if (type === 'child') {
+        await ensureRelationship(relatedId, personId, 'parent')
+        await addSpousesAsParents(relatedId, personId)
+    }
+
+    return id
+}
+
+async function ensureRelationship(personId, relatedId, type) {
     const existing = await db.relationships.filter(
         (r) => r.personId === personId && r.relatedId === relatedId && r.type === type
     ).toArray()
 
     if (existing.length > 0) return existing[0].id
+    return await db.relationships.add({ personId, relatedId, type })
+}
 
-    const id = await db.relationships.add({ personId, relatedId, type })
+async function addSpousesAsParents(parentId, childId) {
+    const spouseIds = await getSpouseIds(parentId)
 
-    // Auto-create reverse relationship for symmetric types
-    if (type === 'spouse') {
-        await db.relationships.add({ personId: relatedId, relatedId: personId, type })
-    } else if (type === 'parent') {
-        // If A is parent of B, then B is child of A
-        await db.relationships.add({ personId: relatedId, relatedId: personId, type: 'child' })
-    } else if (type === 'child') {
-        await db.relationships.add({ personId: relatedId, relatedId: personId, type: 'parent' })
+    for (const spouseId of spouseIds) {
+        if (spouseId === childId) continue
+        await ensureRelationship(spouseId, childId, 'parent')
+        await ensureRelationship(childId, spouseId, 'child')
+    }
+}
+
+async function syncSpouseChildren(personId, spouseId) {
+    const personChildren = await db.relationships.filter(
+        (r) => r.type === 'parent' && r.personId === personId
+    ).toArray()
+    const spouseChildren = await db.relationships.filter(
+        (r) => r.type === 'parent' && r.personId === spouseId
+    ).toArray()
+
+    for (const rel of personChildren) {
+        if (rel.relatedId === spouseId) continue
+        await ensureRelationship(spouseId, rel.relatedId, 'parent')
+        await ensureRelationship(rel.relatedId, spouseId, 'child')
     }
 
-    return id
+    for (const rel of spouseChildren) {
+        if (rel.relatedId === personId) continue
+        await ensureRelationship(personId, rel.relatedId, 'parent')
+        await ensureRelationship(rel.relatedId, personId, 'child')
+    }
+}
+
+async function getSpouseIds(personId) {
+    const relationships = await db.relationships.filter(
+        (r) => r.type === 'spouse' && (r.personId === personId || r.relatedId === personId)
+    ).toArray()
+
+    return [...new Set(relationships.map(function (rel) {
+        return rel.personId === personId ? rel.relatedId : rel.personId
+    }))]
 }
 
 export async function deleteRelationship(id) {
